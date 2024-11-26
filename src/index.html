@@ -14,6 +14,90 @@
     <title>Slot Game</title>
 </head>
 <body>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
+<script>
+    // Firebase Konfigürasyonu
+    const firebaseConfig = {
+        apiKey: "AIzaSyA6deGWWa8UrgXHNmgtiQVAKtKyow9zu00",
+        authDomain: "your-project-id.firebaseapp.com",
+        projectId: "your-project-id",
+        storageBucket: "your-project-id.appspot.com",
+        messagingSenderId: "your-messaging-sender-id",
+        appId: "your-app-id"
+    };
+
+    // Firebase'i Başlat
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Google Auth Provider
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    // Google ile Giriş Yapma Fonksiyonu
+    function googleSignIn() {
+        auth.signInWithPopup(provider)
+            .then((result) => {
+                const user = result.user;
+                console.log("Giriş Başarılı:", user.displayName);
+
+                // Kullanıcıyı Firestore'a Kaydet
+                db.collection("users").doc(user.uid).set({
+                    name: user.displayName,
+                    email: user.email,
+                    balance: 100, // İlk girişte bakiye
+                    lastBonus: Date.now()
+                }, { merge: true });
+            })
+            .catch((error) => {
+                console.error("Giriş Hatası:", error);
+            });
+    }
+
+    // Çıkış Yapma Fonksiyonu
+    function googleSignOut() {
+        auth.signOut().then(() => {
+            console.log("Çıkış Yapıldı.");
+        });
+    }
+
+    // 3 Saatlik Bakiye Güncelleme Fonksiyonu
+    function addBonus(userId) {
+        const userRef = db.collection("users").doc(userId);
+
+        userRef.get().then((doc) => {
+            if (doc.exists) {
+                const userData = doc.data();
+                const now = Date.now();
+                const lastBonus = userData.lastBonus || 0;
+
+                // 3 Saat Kontrolü
+                if (now - lastBonus > 3 * 60 * 60 * 1000) {
+                    const newBalance = (userData.balance || 0) + 100;
+                    userRef.update({
+                        balance: newBalance,
+                        lastBonus: now
+                    });
+                    alert("Bonus eklendi: 100$");
+                }
+            }
+        });
+    }
+
+    // Kullanıcı oturum açtıktan sonra bonus kontrolü
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            addBonus(user.uid);
+        }
+    });
+</script>
+</body>
+ <button onclick="googleSignIn()">Google ile Giriş Yap</button>
+<button onclick="googleSignOut()">Çıkış Yap</button>
+
+</body>
 <noscript>You need to enable JavaScript to run this app.</noscript>
 </body>
 </html>
